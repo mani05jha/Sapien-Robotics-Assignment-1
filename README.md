@@ -1,5 +1,3 @@
-Video link for Assignment 2 ->
-
 Components and Tools Used to develop this project:
 1. 2 24-Volt 175RPM DC Motors with Quadrature Encoders
 2. L298N Motor Driver
@@ -32,4 +30,54 @@ Documentation:
     c. We are then extracting the raw values from the string and passing them to our PID Control Parameters.
     d. The speed is given in Ticks per PID Loop, which means how many encoder Ticks/Counts we want per PID Loop, or every 33 milliseconds.
 6. Now we will talk about the PID Loop, which is running at 30Hz or every 33 milliseconds:
-   a. 
+   a. I have declared some parameters to keep track of the values that are crucial for the output of our PID Controller
+   b. Parameters are:
+      i. setpoint    -> how many encoder Ticks/Counts we want per PID Loop, or every 33 milliseconds
+     ii. Perror      -> corresponds to the previous error used in the calculation of the PIDerivative term per PID loop
+    iii. Encoder     -> Current Encoder Value
+     iv. prevEncoder -> Previous Encoder value or last encoder value
+      v. Pcumlative  -> Cumulative error from the start of the PID loop to the end of the PID loop used in the calculation of PIntergalD term
+     vi. output      -> Result of the PID Controller ( kp * error + Ki * Pcumlative + Kd * )
+    vii. Kp          -> Proportional Component (Formula For Proportional Term is Kp * error)
+   viii. Ki          -> Integral Component     (Formula For Integral Term is Ki * Pcumlative)
+     ix. Kd          -> Derivative Component   (Formula For Derivative Term is Kd * error - Perror)
+   c. PID will start only when the setpoint value is greater than 1
+   d. How PID is working
+      i. We calculate the error term using the current encoder value and the previous encoder value -> Proportinal Error
+     ii. We will add the error value to Pcumlative with the current error (Pcumlative = Pcumlative + (error * 0.033) -> Integral Error
+    iii. We will get our derivative error using current and previous error (derivative = (error - Perror) / 0.033; -> Derivative Error
+     iv. Now we will calculate the Output of PID Controller (output = Ki * error + Kd * Pcumlative + Kd * derivative)
+      v. Adjust the output so that it crosses the bounds of {-255, 255} (-255 means the motor will rotate in the reverse direction and vice versa)
+     vi. Repeat the process for both motors
+    vii. Do it until the stop condition occurs
+7. Now we will talk about the Odometry Update Loop, which is running at 50Hz or every 20 milliseconds:
+   a. This task is to output the current odometry of the Bot, which is denoted by x,y,theta,v, and w
+   b. We have declared some constants and variables to keep track of the odometry
+   c. Parameters are:
+      i. wheel_radius
+     ii. track_width           -> or chassis width
+    iii. count_per_rev         -> per revolution count of the motor encoders
+     iv. time_interval         -> time interval of the Odometry loop task
+      v. PI
+     vi. linear_displacement   -> linear displacement of the robot
+    vii. angular_displacement  -> angular displacement of the robot
+   viii. x                     -> Position of the robot on the X Axis
+     ix. y                     -> Position of the robot on the Y Axis
+      x. theta                 -> Angular Position along Z Axis
+     xi. v                     -> Linear Velocity of the robot
+    xii. w                     -> Angular Velocity of the robot
+   d. How Odometry updates are working
+      i. We will calculate the linear displacement of the robot by averaging the displacement of both the motor wheel using the formula                                                                                                                          (linear_displacement_of_single_motor = ( 2*PI*wheel_radius*(current_encoder_count - previous_encoder_count)) / count_per_rev ))
+         (linear_displacement = (linear_displacement_of_left_motor + linear_displacement_of_right_motor ) / 2)
+     ii. Now we will calculate the angular displacement of the robot along the z-axis by subtracting the left_motor_displacement from right_motor_displacement and then dividing it by track_width                                                               (angular_displacement = (linear_displacement_of_right_motor - linear_displacement_of_left_motor) / track_width )
+    iii. Now we will store the current encoder count in previous_encoder_count for the next Odometry calculation
+     iv. Now we will calculate the x and y position of the robot using the formula
+         ( x_current = x_previous + cos(current_angle + (angular_displacement / 2))) ( y_current = y_previous + sin(current_angle + (angular_displacement / 2)))
+      v. Now we will calculate the current angle of the robot using the formula
+         theta = theta + angular_displacement
+     vi. Now we will bound the theta of the robot in the range (-PI, PI)
+
+Challenges:
+1. Understanding the Kalman Filter itself is challenging
+2. The motors I am using with the robot have an opposite arrangement to move the robot forward; one motor will rotate clockwise, and the other counterclockwise. This leads to an error in which the encoder counts of both motors are significantly       different
+3. To solve this issue, I had to implement a PID controller to control the motor speed using Encoder TICKS per PID loop.
