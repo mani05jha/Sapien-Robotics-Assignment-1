@@ -17,19 +17,19 @@ Some Considerations:
 
 Documentation:
 1. In this code, 4 things are running in parallel
-   a. Serial data checker at 100Hz
-   b. PID Controller at 30Hz
-   c. Odometry Update task at 50Hz
-   d. Separate ISR functions for left and right encoders
-2.  ISR is implemented on both the signal pins of the encoders, Signal Pin A and B
-3.  The ISR function will just compare the previous and current state of Signal Pins A and B. If the state is valid, it will Increment/Decrement the current position of the encoder. This type of check will filter the invalid data and does not update     the encoder counter on invalid values
-4.  I was unable to implement debouncing on encoder pins as my encoders are very high, approximately. 8000 positions in just 1 sec for 2.9 revolutions. This gives approximately 8 positions per millisecond.
-5.  Now we will talk about the Serial Data checker, which is running at 100Hz or every 10 milliseconds:
+-> Serial data checker at 100Hz
+-> PID Controller at 30Hz
+-> Odometry Update task at 50Hz
+-> Separate ISR functions for left and right encoders
+3.  ISR is implemented on both the signal pins of the encoders, Signal Pin A and B
+4.  The ISR function will just compare the previous and current state of Signal Pins A and B. If the state is valid, it will Increment/Decrement the current position of the encoder. This type of check will filter the invalid data and does not update     the encoder counter on invalid values
+5.  I was unable to implement debouncing on encoder pins as my encoders are very high, approximately. 8000 positions in just 1 sec for 2.9 revolutions. This gives approximately 8 positions per millisecond.
+6.  Now we will talk about the Serial Data checker, which is running at 100Hz or every 10 milliseconds:
     a. I am using the ArduinoJson library to parse a JSON string
     b. \"{\"vL\": \"91\", \"vR\": \"92\" }\" -> This is how our JSON string looks, which is used to control the speed of both the motors
     c. We are then extracting the raw values from the string and passing them to our PID Control Parameters.
     d. The speed is given in Ticks per PID Loop, which means how many encoder Ticks/Counts we want per PID Loop, or every 33 milliseconds.
-6. Now we will talk about the PID Loop, which is running at 30Hz or every 33 milliseconds:
+7. Now we will talk about the PID Loop, which is running at 30Hz or every 33 milliseconds:
    a. I have declared some parameters to keep track of the values that are crucial for the output of our PID Controller
    b. Parameters are:
       i. setpoint    -> how many encoder Ticks/Counts we want per PID Loop, or every 33 milliseconds
@@ -50,7 +50,7 @@ Documentation:
       v. Adjust the output so that it crosses the bounds of {-255, 255} (-255 means the motor will rotate in the reverse direction and vice versa)
      vi. Repeat the process for both motors
     vii. Do it until the stop condition occurs
-7. Now we will talk about the Odometry Update Loop, which is running at 50Hz or every 20 milliseconds:
+8. Now we will talk about the Odometry Update Loop, which is running at 50Hz or every 20 milliseconds:
    a. This task is to output the current odometry of the Bot, which is denoted by x,y,theta,v, and w
    b. We have declared some constants and variables to keep track of the odometry
    c. Parameters are:
