@@ -48,14 +48,12 @@ typedef struct {
   const uint8_t ENCB;
   const uint8_t MF_PIN;
   const uint8_t MB_PIN;
-  const int frequency;
-  const int resolution;
   volatile uint8_t enc_last;
   volatile int32_t counter;
   volatile int32_t prev_counter;
 } motor_data;
-motor_data left_motor = { 22, 23, 32, 33, 5000, 8, 0, 0, 0 };
-motor_data right_motor = { 16, 17, 25, 26, 5000, 8, 0, 0, 0 };
+motor_data left_motor = { 23, 22, 25, 26, 0, 0, 0 };
+motor_data right_motor = { 17, 16, 32, 33, 0, 0, 0 };
 
 // Encoder lookup table to decode transitions
 const int8_t ENC_STATES[] = {
@@ -69,14 +67,14 @@ void IRAM_ATTR update_encoders_left() {
   left_motor.enc_last <<= 2;
   left_motor.enc_last |= ((digitalRead(left_motor.ENCA) << 1) | digitalRead(left_motor.ENCB));
 
-  left_motor.counter += ENC_STATES[left_motor.enc_last & 0x0F];
+  left_motor.counter -= ENC_STATES[left_motor.enc_last & 0x0F];
 }
 
 void IRAM_ATTR update_encoders_right() {
   right_motor.enc_last <<= 2;
   right_motor.enc_last |= ((digitalRead(right_motor.ENCA) << 1) | digitalRead(right_motor.ENCB));
 
-  right_motor.counter += ENC_STATES[right_motor.enc_last & 0x0F];
+  right_motor.counter -= ENC_STATES[right_motor.enc_last & 0x0F];
 }
 
 void kalman_filter(bool jump) {
@@ -278,7 +276,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(right_motor.ENCB), update_encoders_right, CHANGE);
 
   xTaskCreatePinnedToCore(update_odometry, "Odometry Updates", 10000, NULL, 1, NULL, 1);
-  // xTaskCreatePinnedToCore(pid_controller, "PID Controller", 4096, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(pid_controller, "PID Controller", 4096, NULL, 1, NULL, 1);
 }
 
 void loop() {
@@ -290,22 +288,6 @@ void loop() {
     if (!error) {
       left_motor_pid.setpoint = atoi(json["vL"]);
       right_motor_pid.setpoint = atoi(json["vR"]);
-
-      if (left_motor_pid.setpoint > 0) {
-        analogWrite(left_motor.MF_PIN, left_motor_pid.setpoint);
-        analogWrite(left_motor.MB_PIN, 0);
-      } else {
-        analogWrite(left_motor.MF_PIN, 0);
-        analogWrite(left_motor.MB_PIN, abs(left_motor_pid.setpoint));
-      };
-
-      if (right_motor_pid.setpoint > 0) {
-        analogWrite(right_motor.MF_PIN, right_motor_pid.setpoint);
-        analogWrite(right_motor.MB_PIN, 0);
-      } else {
-        analogWrite(right_motor.MF_PIN, 0);
-        analogWrite(right_motor.MB_PIN, abs(right_motor_pid.setpoint));
-      };
 
       if (left_motor_pid.setpoint == 0 && right_motor_pid.setpoint == 0) moving = false;
       else moving = true;
@@ -322,12 +304,12 @@ void pid_control_unit(pid* controller) {
   int16_t output = Kp * error + Ki * controller->Pcumlative + Kd * derivative;
   if (output > 255) output = 255;
   else if (output < -255) output = -255;
-  Serial.print("counter: " + String(controller->Encoder));
-  Serial.print(" value: " + String(value));
-  Serial.print(" error: " + String(error));
-  Serial.print(" integral: " + String(controller->Pcumlative));
-  Serial.print(" derivative: " + String(derivative));
-  Serial.println(" output: " + String(output));
+  // Serial.print("counter: " + String(controller->Encoder));
+  // Serial.print(" value: " + String(value));
+  // Serial.print(" error: " + String(error));
+  // Serial.print(" integral: " + String(controller->Pcumlative));
+  // Serial.print(" derivative: " + String(derivative));
+  // Serial.println(" output: " + String(output));
   controller->Perror = error;
   controller->prevEncoder = controller->Encoder;
   controller->output = output;
